@@ -1,0 +1,19 @@
+{
+  "name": "mile23/core-composer-converter",
+  "description": "Get the Composer status for this Drupal project.",
+  "type": "composer-plugin",
+  "require": {
+    "php": ">=7.0.8",
+    "composer-plugin-api": "^1.0.0",
+    "symfony/finder": "^3.4",
+    "symfony/yaml": "^3.4"
+  },
+  "autoload": {
+    "psr-4": {
+      "Drupal\\Composer\\Plugin\\ComposerConverter\\": "src"
+    }
+  },
+  "extra": {
+    "class": "Drupal\\Composer\\Plugin\\ComposerConverter\\ConverterPlugin"
+  }
+}
