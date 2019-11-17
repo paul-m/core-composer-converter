@@ -2,19 +2,19 @@
 
 namespace Drupal\Composer\Plugin\ComposerConverter;
 
+use Drupal\Composer\Plugin\ComposerConverter\ExtensionReconciler;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
+use Composer\Command\InitCommand;
+use Composer\Factory;
 use Composer\Json\JsonFile;
 use Composer\Json\JsonManipulator;
 use Composer\Repository\CompositeRepository;
 use Composer\Repository\PlatformRepository;
-use Composer\Command\InitCommand;
-use Drupal\Composer\Plugin\ComposerConverter\ExtensionReconciler;
-use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Composer\Semver\Semver;
-use Composer\Factory;
+use Symfony\Component\Console\Question\ConfirmationQuestion;
+use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  */
@@ -113,7 +113,7 @@ EOT
     $this->composerBackupContents = file_get_contents($this->backupComposerJsonPath);
 
     // Replace composer.json with our template.
-    $io->write(' - Creating new composer.json file...')
+    $io->write(' - Creating new composer.json file...');
     $drupal_class_file = $this->locateDrupalClassFile($working_dir);
     $core_minor = $this->determineDrupalCoreVersion($drupal_class_file);
     // Put our info into the template.
@@ -215,11 +215,15 @@ EOT
       }
     }
 
-    // @todo: Alert the user that they have unreconciled extensions.
-    /*
-      if ($exotic = $reconciler->getExoticPackages()) {
-      }
-     */
+    // Alert the user that they have unreconciled extensions.
+    if ($exotic = $reconciler->getExoticPackages()) {
+      $style = new SymfonyStyle($input, $output);
+      $io->write(' - Discovered extensions which are not in the original composer.json, and which do not have drupal.org projects. These extensions will need to be added manually if you wish to manage them through Composer:');
+      $style->listing($exotic);
+    }
+
+    $io->write('<info>Finished!</info>');
+    $io->write('');
   }
 
   public function revertComposerFile($hardExit = true) {
