@@ -112,7 +112,7 @@ EOT
     $this->backupComposerJsonPath = $this->createBackup($working_dir, $this->rootComposerJsonPath);
     $this->composerBackupContents = file_get_contents($this->backupComposerJsonPath);
 
-    // Replace composer.json with our template.
+    // Replace composer.json with our template...
     $io->write(' - Creating new composer.json file...');
     $drupal_class_file = $this->locateDrupalClassFile($working_dir);
     $core_minor = $this->determineDrupalCoreVersion($drupal_class_file);
