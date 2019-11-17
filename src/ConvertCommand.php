@@ -108,10 +108,12 @@ EOT
     }
 
     // Make a backup of the composer.json file.
+    $io->write(' - Storing backup file...');
     $this->backupComposerJsonPath = $this->createBackup($working_dir, $this->rootComposerJsonPath);
     $this->composerBackupContents = file_get_contents($this->backupComposerJsonPath);
 
     // Replace composer.json with our template.
+    $io->write(' - Creating new composer.json file...')
     $drupal_class_file = $this->locateDrupalClassFile($working_dir);
     $core_minor = $this->determineDrupalCoreVersion($drupal_class_file);
     // Put our info into the template.
@@ -131,7 +133,9 @@ EOT
     $manipulator = new JsonManipulator(file_get_contents($this->rootComposerJsonPath));
 
     // Copy config for: Repositories, patches, config for drupal/core-* plugins.
+    $io->write(' - Checking repositories...');
     $this->copyRepositories($backup_utility, $manipulator);
+    $io->write(' - Checking extra configuration...');
     $this->copyExtra($backup_utility, $manipulator);
 
     // @todo: Configure drupal/core-composer-scaffold based on
@@ -139,15 +143,16 @@ EOT
     ;
 
     // Gather existing extension dependencies from the old composer.json file.
+    $io->write(' - Moving existing Drupal extensions to new composer.json file...');
     $reconciler = new ExtensionReconciler($backup_utility, $working_dir);
     $extension_require = [
       'require' => $reconciler->getSpecifiedExtensions(),
       'require-dev' => $reconciler->getSpecifiedExtensions(TRUE),
     ];
     $sort_packages = $input->getOption('sort-packages') || (new JsonFileUtility(new JsonFile($this->rootComposerJsonPath)))->getSortPackages();
-    foreach ($extension_require as $property_name => $dependencies) {
+    foreach ($extension_require as $requires => $dependencies) {
       foreach ($dependencies as $package_name => $constraint) {
-        $manipulator->addLink($property_name, $package_name, $constraint, $sort_packages);
+        $manipulator->addLink($requires, $package_name, $constraint, $sort_packages);
       }
     }
 
@@ -162,12 +167,14 @@ EOT
     $add_packages = [];
 
     // If extra has patch info, require cweagans/composer-patches.
+    $io->write(' - Determining whether project needs patches...');
     if ($this->hasPatchesConfig($backup_utility)) {
       $add_packages['cweagans/composer-patches'] = 'cweagans/composer-patches';
     }
 
     // Make a new reconciler for our root composer.json, since it now has all the
-    // extension packages from
+    // extension packages from the backup.
+    $io->write(' - Scanning the filesystem for extensions not in the composer.json file...');
     $reconciler = new ExtensionReconciler(new JsonFileUtility(new JsonFile($this->rootComposerJsonPath)), $working_dir);
     // Add requires for extensions on the file system.
     $add_packages = array_merge(
