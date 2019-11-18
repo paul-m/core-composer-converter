@@ -4,7 +4,6 @@ namespace Drupal\Composer\Plugin\ComposerConverter;
 
 use Symfony\Component\Finder\Finder;
 use Symfony\Component\Yaml\Yaml;
-use Composer\Json\JsonFile;
 
 /**
  * @todo Add a list of reconciled extensions and their constraints.
@@ -38,6 +37,13 @@ class ExtensionReconciler {
   protected $projects = NULL;
 
   /**
+   * Whether we should solve for Drupal dependencies based on their project name.
+   *
+   * @var bool
+   */
+  protected $preferProjects;
+
+  /**
    * Construct a reconciler.
    *
    * @param \Drupal\Composer\Plugin\ComposerConverter\JsonFileUtility $from_utility
@@ -45,9 +51,15 @@ class ExtensionReconciler {
    * @param string $working_dir
    *   Full path to the working directory as specified from Composer.
    */
-  public function __construct(JsonFileUtility $from_utility, $working_dir) {
+  public function __construct(JsonFileUtility $from_utility, $working_dir, $prefer_projects = FALSE) {
     $this->fromUtility = $from_utility;
+    // Check whether the working dir obviously exists, because realpath() makes it
+    // difficult to inject vfsStream for testing.
+    if (!file_exists($working_dir)) {
+      $working_dir = realpath($working_dir);
+    }
     $this->workingDir = $working_dir;
+    $this->preferProjects = $prefer_projects;
   }
 
   /**
@@ -59,9 +71,9 @@ class ExtensionReconciler {
    *   Array of extension package names, such as drupal/ajax_example, keyed by
    *   the extension name, such as ajax_example.
    */
-  public function getUnreconciledPackages($prefer_projects = FALSE) {
+  public function getUnreconciledPackages() {
     if ($this->needThesePackages === NULL) {
-      $this->processNeededPackages($prefer_projects);
+      $this->processNeededPackages();
     }
     return $this->needThesePackages;
   }
@@ -103,6 +115,9 @@ class ExtensionReconciler {
    * Get packages for extensions in filesystem we don't know how to deal with.
    *
    * These could be path repos or other stuff we can't figure out.
+   *
+   * @return string[]
+   *   Array of extension machine names we discovered, keyed by machine name.
    */
   public function getExoticPackages() {
     if ($this->exoticSetupExtensions === NULL) {
@@ -114,21 +129,27 @@ class ExtensionReconciler {
   /**
    * Process our package and filesystem into reconcilable information.
    */
-  protected function processNeededPackages($prefer_projects = FALSE) {
+  protected function processNeededPackages() {
     // Find all the extensions in the file system, sorted by D.O project name.
     $this->projects = [];
+    // This is our pre-parsed database of info about all the extensions. Keyed by
+    // machine name.
     $extension_objects = [];
     /* @var $file \SplFileInfo */
-    foreach ($this->findInfoFiles(realpath($this->workingDir)) as $file) {
+    foreach ($this->findInfoFiles($this->workingDir) as $file) {
       $info = Yaml::parseFile($file->getPathname());
       $project = isset($info['project']) ? $info['project'] : '__unknown_project';
       $extension_name = basename($file->getPathname(), '.info.yml');
-      $this->projects[$project][$extension_name] = $extension_name;
       $e = new Extension();
-      $e->name = basename($file->getPathname(), '.info.yml');
+      $e->machineName = $extension_name;
+      $e->name = $info['name'] ?? $extension_name;
       $e->pathname = $file->getPathname();
-      $e->project = isset($info['project']) ? $info['project'] : NULL;
-      $extension_objects[$e->name] = $e;
+      $e->project = $info['project'] ?? NULL;
+      if ($e->version = $info['version'] ?? NULL) {
+        $e->semanticVersion = DrupalInspector::getSemanticVersion($e->version);
+      }
+      $extension_objects[$extension_name] = $e;
+      $this->projects[$project][$extension_name] = $extension_name;
     }
 
     // Reconcile extensions against require and require-dev.
@@ -160,7 +181,7 @@ class ExtensionReconciler {
     $this->exoticSetupExtensions = [];
     if (isset($this->projects['__unknown_project'])) {
       foreach ($this->projects['__unknown_project'] as $extension) {
-        $this->exoticSetupExtensions[$extension] = $extension;
+        $this->exoticSetupExtensions[$extension] = $extension_objects[$extension]->name;
       }
       unset($this->projects['__unknown_project']);
     }
@@ -179,7 +200,7 @@ class ExtensionReconciler {
       // they're already in the composer.json.
       foreach ($extensions as $extension) {
         if (!in_array($extension, $required_ext_or_proj_names)) {
-          if ($prefer_projects) {
+          if ($this->preferProjects) {
             $this->needThesePackages[$project] = $project;
           }
           else {

@@ -175,11 +175,15 @@ EOT
     // Make a new reconciler for our root composer.json, since it now has all the
     // extension packages from the backup.
     $io->write(' - Scanning the filesystem for extensions not in the composer.json file...');
-    $reconciler = new ExtensionReconciler(new JsonFileUtility(new JsonFile($this->rootComposerJsonPath)), $working_dir);
+    $reconciler = new ExtensionReconciler(
+      new JsonFileUtility(new JsonFile($this->rootComposerJsonPath)),
+      $working_dir,
+      $input->getOption('prefer-projects')
+    );
     // Add requires for extensions on the file system.
     $add_packages = array_merge(
       $add_packages,
-      $reconciler->getUnreconciledPackages($input->getOption('prefer-projects'))
+      $reconciler->getUnreconciledPackages()
     );
 
     // Add all the packages we need. We have to do some basic solving here, much like

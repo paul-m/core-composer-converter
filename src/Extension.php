@@ -10,6 +10,10 @@ class Extension {
 
   public $name;
 
+  public $machineName;
+
   public $version;
+
+  public $semanticVersion;
 
 }
