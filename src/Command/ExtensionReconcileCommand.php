@@ -2,7 +2,6 @@
 
 namespace Drupal\Composer\Plugin\ComposerConverter\Command;
 
-use Composer\Command\InitCommand;
 use Composer\Factory;
 use Composer\Json\JsonFile;
 use Composer\Json\JsonManipulator;
@@ -55,11 +54,9 @@ EOT
       $style_io = new SymfonyStyle($input, $output);
       $output->writeln('<info>The following actions will be performed:</info>');
       $item_list = [
-        'Make a backup of your composer.json file.',
-        'Replace composer.json with one named drupal/converted-project.',
-        'Copy config for: Repositories, patches, config for drupal/core-* plugins.',
-        'Add requires for extensions on the file system.',
-        'Configure drupal/core-composer-scaffold based on drupal-composer/drupal-scaffold config.',
+        'Determine if there are any extension on the file system which are not represented in composer.json.',
+        'Declare these extensions within composer.json so that you can use Composer to manage them.',
+        'Remove the existing extensions from the file system.',
       ];
       $style_io->listing($item_list);
       if (!$input->getOption('no-interaction')) {
