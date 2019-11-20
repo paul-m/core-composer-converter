@@ -4,6 +4,9 @@ namespace Drupal\Composer\Plugin\ComposerConverter;
 
 use Composer\Json\JsonFile;
 
+/**
+ * Utility facade for JsonFile.
+ */
 class JsonFileUtility {
 
   /**
@@ -12,6 +15,12 @@ class JsonFileUtility {
    * @var \Composer\Json\JsonFile
    */
   protected $jsonFile;
+
+  /**
+   * The contents of the JSON file.
+   *
+   * @var string
+   */
   protected $jsonFileContents;
 
   public function __construct(JsonFile $json_file) {

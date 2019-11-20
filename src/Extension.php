@@ -2,6 +2,9 @@
 
 namespace Drupal\Composer\Plugin\ComposerConverter;
 
+/**
+ * Data class for extensions.
+ */
 class Extension {
 
   public $pathname;

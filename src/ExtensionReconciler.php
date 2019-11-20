@@ -6,7 +6,7 @@ use Symfony\Component\Finder\Finder;
 use Symfony\Component\Yaml\Yaml;
 
 /**
- * @todo Add a list of reconciled extensions and their constraints.
+ * Scans the file system, tells you which extensions are not accounted for.
  */
 class ExtensionReconciler {
 
@@ -14,7 +14,7 @@ class ExtensionReconciler {
   protected $needThesePackages = NULL;
 
   /**
-   * The old composer.json file we'll inspect.
+   * The composer.json file we'll inspect.
    *
    * @var \Drupal\Composer\Plugin\ComposerConverter\JsonFileUtility
    */
@@ -22,6 +22,8 @@ class ExtensionReconciler {
 
   /**
    * The full path to the Composer working directory.
+   *
+   * This is assumed to contain any filesystem where we can find extensions.
    *
    * @var string
    */
@@ -49,7 +51,8 @@ class ExtensionReconciler {
    * @param \Drupal\Composer\Plugin\ComposerConverter\JsonFileUtility $from_utility
    *   Full path to a composer.json file we'll reconcile against.
    * @param string $working_dir
-   *   Full path to the working directory as specified from Composer.
+   *   Full path to the working directory as specified from Composer. This is
+   *   assumed to contain any filesystem where we can find extensions.
    */
   public function __construct(JsonFileUtility $from_utility, $working_dir, $prefer_projects = FALSE) {
     $this->fromUtility = $from_utility;
