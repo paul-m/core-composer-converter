@@ -1,6 +1,7 @@
 {
   "name": "mile23/core-composer-converter",
   "description": "Get the Composer status for this Drupal project.",
+  "license": "GPL-2.0-or-later",
   "type": "composer-plugin",
   "require": {
     "php": ">=7.0.8",

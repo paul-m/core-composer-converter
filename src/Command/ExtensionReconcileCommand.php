@@ -52,7 +52,7 @@ EOT
   protected function interact(InputInterface $input, OutputInterface $output) {
     if (!$input->getOption('no-interaction')) {
       $style_io = new SymfonyStyle($input, $output);
-      $output->writeln('<info>The following actions will be performed:</info>');
+      $output->write('<info>The following actions will be performed:</info>');
       $item_list = [
         'Determine if there are any extension on the file system which are not represented in composer.json.',
         'Declare these extensions within composer.json so that you can use Composer to manage them.',

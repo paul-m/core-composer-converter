@@ -8,7 +8,6 @@ use Drupal\Composer\Plugin\ComposerConverter\JsonFileUtility;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Input\InputOption;
 use Symfony\Component\Console\Output\OutputInterface;
-use Composer\Command\InitCommand;
 use Composer\Json\JsonFile;
 use Composer\Json\JsonManipulator;
 use Composer\Semver\Semver;
@@ -19,7 +18,7 @@ use Symfony\Component\Console\Input\ArrayInput;
 /**
  * Performs a conversion of a composer.json file.
  */
-class ConvertCommand extends InitCommand {
+class ConvertCommand extends ConvertCommandBase {
 
   /**
    * Contents of the composer.json file before we modified it.
@@ -66,20 +65,13 @@ EOT
   /**
    * {@inheritdoc}
    */
-  protected function initialize(InputInterface $input, OutputInterface $output) {
-    parent::initialize($input, $output);
-  }
-
-  /**
-   * {@inheritdoc}
-   */
   protected function interact(InputInterface $input, OutputInterface $output) {
-    $style_io = new SymfonyStyle($input, $output);
+    $style = new SymfonyStyle($input, $output);
     $output->writeln('<info>The following actions will be performed:</info>');
     $item_list = [
       'Add stuff to this list.'
     ];
-    $style_io->listing($item_list);
+    $style->listing($item_list);
     if (!$input->getOption('no-interaction')) {
       $helper = $this->getHelper('question');
       $this->userCanceled = !$helper->ask($input, $output, new ConfirmationQuestion('Continue? ', false));
@@ -282,6 +274,15 @@ EOT
     $to->addMainKey('repositories', array_merge($from_repositories, $required_repositories));
   }
 
+  /**
+   * Determine whether the composer.json file has patches configured.
+   *
+   * @param JsonFileUtility $from
+   *   The composer.json file we're curious about.
+   *
+   * @return boolean
+   *   TRUE if patch configurations were detected, FALSE otherwise.
+   */
   protected function hasPatchesConfig(JsonFileUtility $from) {
     $patch_config_keys = [
       'patches',
@@ -299,8 +300,15 @@ EOT
   }
 
   /**
-   * @return mixed|string
-   * @throws \Exception
+   * Get the Drupal core version from \Drupal::VERSION if possible.
+   *
+   * @param string|mixed $drupal_class_file
+   *   Full path to the \Drupal class file. This is usually located in
+   *   core/lib/Drupal.php. If empty or FALSE, a default value will be returned.
+   *
+   * @return string
+   *   A version constraint for the current Drupal core minor version. If none can be
+   *   determined, defaults to '^8.7'.
    */
   protected function determineDrupalCoreVersion($drupal_class_file) {
     // Default to a reasonable previous minor version. When the user updates, they'll
@@ -310,19 +318,26 @@ EOT
 
     if ($drupal_class_file) {
       $core_version = DrupalInspector::determineDrupalCoreVersionFromDrupalPhp(file_get_contents($drupal_class_file));
-      if (!Semver::satisfiedBy([$core_version], "*")) {
-        throw new \Exception("Drupal core version $core_version is invalid.");
-      }
-      // Use major and minor. We know major and minor are present because this
-      // version comes from \Drupal::VERSION.
-      if (preg_match('/^(\d+).(\d+)./', $core_version, $matches)) {
-        $drupal_core_constraint = '^' . $matches[1] . '.' . $matches[2];
+      if (Semver::satisfiedBy([$core_version], "*")) {
+        // Use major and minor. We know major and minor are present because this
+        // version comes from \Drupal::VERSION.
+        if (preg_match('/^(\d+).(\d+)./', $core_version, $matches)) {
+          $drupal_core_constraint = '^' . $matches[1] . '.' . $matches[2];
+        }
       }
     }
-
     return $drupal_core_constraint;
   }
 
+  /**
+   * Locate the \Drupal class file for the codebase.
+   *
+   * @param string $working_dir
+   *   The full path to the Composer working directory.
+   *
+   * @return boolean|string
+   *   The full path to the \Drupal class file, or FALSE if no file could be found.
+   */
   protected function locateDrupalClassFile($working_dir) {
     // Basic drupal/drupal or legacy file layout.
     $drupal_class = $working_dir . '/core/lib/Drupal.php';
