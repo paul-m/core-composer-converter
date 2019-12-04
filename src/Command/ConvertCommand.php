@@ -43,13 +43,13 @@ class ConvertCommand extends ConvertCommandBase {
     $this
       ->setName('drupal-legacy-convert')
       ->setDescription('Convert your Drupal project to a Composer-based one.')
-      ->setDefinition(array(
+      ->setDefinition([
         new InputOption('package-name', NULL, InputOption::VALUE_REQUIRED, 'The new package name, to replace drupal/drupal.', 'drupal/legacy-project-converted'),
         new InputOption('dry-run', NULL, InputOption::VALUE_NONE, 'Display all the changes that would occur, without performing them.'),
-        new InputOption('no-update', null, InputOption::VALUE_NONE, 'Perform conversion but does not perform update.'),
-        new InputOption('sort-packages', null, InputOption::VALUE_NONE, 'Sorts packages when adding/updating a new dependency'),
+        new InputOption('no-update', NULL, InputOption::VALUE_NONE, 'Perform conversion but does not perform update.'),
+        new InputOption('sort-packages', NULL, InputOption::VALUE_NONE, 'Sorts packages when adding/updating a new dependency'),
         new InputOption('prefer-projects', NULL, InputOption::VALUE_NONE, 'When possible, use d.o project name instead of extension name.'),
-      ))
+      ])
       ->setHelp(
         <<<EOT
 This command will change your composer.json file. By default it will also
@@ -58,8 +58,7 @@ advisable to work on a backup installation, or to use git or other VCS so
 you can undo the changes here. Never perform this operation on a production
 site.
 EOT
-      )
-    ;
+    );
   }
 
   /**
@@ -69,12 +68,12 @@ EOT
     $style = new SymfonyStyle($input, $output);
     $output->writeln('<info>The following actions will be performed:</info>');
     $item_list = [
-      'Add stuff to this list.'
+      'Add stuff to this list.',
     ];
     $style->listing($item_list);
-    if (!$input->getOption('no-interaction')) {
-      $helper = $this->getHelper('question');
-      $this->userCanceled = !$helper->ask($input, $output, new ConfirmationQuestion('Continue? ', false));
+    $helper = $this->getHelper('question');
+    if (!$helper->ask($input, $output, new ConfirmationQuestion('Continue? ', FALSE))) {
+      throw new \RuntimeException('User cancelled.', 1);
     }
   }
 
@@ -82,9 +81,6 @@ EOT
    * {@inheritdoc}
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
-    if ($this->userCanceled) {
-      return;
-    }
     $io = $this->getIO();
 
     $working_dir = realpath($input->getOption('working-dir'));
@@ -129,8 +125,6 @@ EOT
 
     // @todo: Configure drupal/core-composer-scaffold based on
     //        drupal-composer/drupal-scaffold config.',
-    ;
-
     // Gather existing extension dependencies from the old composer.json file.
     $io->write(' - Moving existing Drupal extensions to new composer.json file...');
     $reconciler = new ExtensionReconciler($backup_utility, $working_dir);
@@ -171,9 +165,9 @@ EOT
   /**
    * Revert our changes to the composer.json file.
    *
-   * @param type $hardExit
+   * @param mixed $hardExit
    */
-  public function revertComposerFile($hardExit = true) {
+  public function revertComposerFile($hardExit = TRUE) {
     $io = $this->getIO();
 
     $io->writeError("\n" . '<error>Conversion failed, reverting ' . $this->rootComposerJsonPath . ' to its original contents.</error>');
@@ -265,7 +259,7 @@ EOT
     $required_repositories = [
       'drupal_composer_facade' => [
         'type' => 'composer',
-        'url' => 'https://packages.drupal.org/8'
+        'url' => 'https://packages.drupal.org/8',
       ],
     ];
 
@@ -277,10 +271,10 @@ EOT
   /**
    * Determine whether the composer.json file has patches configured.
    *
-   * @param JsonFileUtility $from
+   * @param \Drupal\Composer\Plugin\ComposerConverter\JsonFileUtility $from
    *   The composer.json file we're curious about.
    *
-   * @return boolean
+   * @return bool
    *   TRUE if patch configurations were detected, FALSE otherwise.
    */
   protected function hasPatchesConfig(JsonFileUtility $from) {
@@ -335,7 +329,7 @@ EOT
    * @param string $working_dir
    *   The full path to the Composer working directory.
    *
-   * @return boolean|string
+   * @return bool|string
    *   The full path to the \Drupal class file, or FALSE if no file could be found.
    */
   protected function locateDrupalClassFile($working_dir) {

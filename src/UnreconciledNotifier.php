@@ -34,7 +34,7 @@ class UnreconciledNotifier {
     $working_dir = realpath($this->composer->getConfig()->get('working-dir'));
     $root_package_path = $working_dir . '/composer.json';
     $from_utility = new JsonFileUtility(new JsonFile($root_package_path));
-    $reconciler = new ExtensionReconciler($from_utility, $working_dir, true);
+    $reconciler = new ExtensionReconciler($from_utility, $working_dir, TRUE);
 
     if ($reconciler->getUnreconciledPackages()) {
       $this->io->write("<info>This project has extensions on the file system which are not reflected in the composer.json file. Run 'composer drupal:reconcile-extensions --help' to fix this.</info>");

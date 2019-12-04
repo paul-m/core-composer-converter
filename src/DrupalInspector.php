@@ -27,7 +27,7 @@ class DrupalInspector {
    */
   public static function getSemanticVersion($drupal_version) {
     // Strip the 8.x prefix from the version.
-    $version = preg_replace('/^8\.x-/', null, $drupal_version);
+    $version = preg_replace('/^8\.x-/', NULL, $drupal_version);
 
     if (preg_match('/-dev$/', $version)) {
       return preg_replace('/^(\d).+-dev$/', '$1.x-dev', $version);
@@ -35,7 +35,7 @@ class DrupalInspector {
 
     $matches = [];
     preg_match('/^(\d{1,2})\.(\d{0,2})(\-(alpha|beta|rc|unstable)\d{1,2})?$/i', $version, $matches);
-    $version = false;
+    $version = FALSE;
     if (!empty($matches)) {
       $version = "{$matches[1]}.{$matches[2]}.0";
       if (array_key_exists(3, $matches)) {
@@ -72,7 +72,7 @@ class DrupalInspector {
 
       // Matches 8.6.11-dev. This is not actually a valid semantic
       // version. We fix it to become 8.6.x-dev before returning.
-      if (strstr($version, '-dev') !== false && substr_count($version, '.') == 2) {
+      if (strstr($version, '-dev') !== FALSE && substr_count($version, '.') == 2) {
         // Matches (core) version 8.6.11-dev.
         $version = str_replace('-dev', '', $version);
         $pos1 = strpos($version, '.');
