@@ -176,6 +176,10 @@ class ExtensionRepository {
         if (isset($info['package']) && strtolower($info['package']) == 'testing') {
           return FALSE;
         }
+        // Ensure there's a name and type, because some contrib modules have files
+        // matching *.info.yml which are not actually extension metadata. See
+        // date:date_api module for example.
+        return isset($info['name']) && isset($info['type']);
       });
     return $finder;
   }
