@@ -3,6 +3,7 @@
 namespace Drupal\Composer\Plugin\ComposerConverter\Extension;
 
 use Drupal\Composer\Plugin\ComposerConverter\DrupalInspector;
+use Drupal\Composer\Plugin\ComposerConverter\Extension\ExtensionRepository;
 use Symfony\Component\Yaml\Yaml;
 
 /**
@@ -11,7 +12,7 @@ use Symfony\Component\Yaml\Yaml;
 class Extension {
 
   /**
-   * Object representing the *.info.yml file.
+   * Object representing the *.info.yml (or *.info) file.
    *
    * @var \SplFileInfo
    */
@@ -33,6 +34,10 @@ class Extension {
 
   public function __construct(\SplFileInfo $info_file) {
     $this->infoFile = $info_file;
+    if ($info_file->getExtension() == 'info') {
+      $this->machineName = basename($info_file->getPathname(), '.info');
+      return;
+    }
     $this->machineName = basename($info_file->getPathname(), '.info.yml');
   }
 
@@ -46,7 +51,14 @@ class Extension {
 
   protected function getParsedInfo() {
     if (empty($this->parsedInfo)) {
-      $this->parsedInfo = Yaml::parseFile($this->getInfoFile()->getPathname());
+      $pathname = $this->getInfoFile()->getPathname();
+      // Account for D7-style info files.
+      if ($this->getInfoFile()->getExtension() == 'info') {
+        $this->parsedInfo = ExtensionRepository::drupalParseInfoFormat(file_get_contents($pathname));
+      }
+      else {
+        $this->parsedInfo = Yaml::parseFile($pathname);
+      }
     }
     return $this->parsedInfo;
   }

@@ -44,7 +44,9 @@ class ExtensionRepository {
    */
   public static function create($root_directory, \Iterator $extension_iterator = NULL) {
     if ($extension_iterator === NULL) {
-      $extension_iterator = static::findInfoFiles($root_directory);
+      $extension_iterator = new \AppendIterator();
+      $extension_iterator->append(static::findInfoFiles($root_directory)->getIterator());
+      $extension_iterator->append(static::findInfoYmlFiles($root_directory)->getIterator());
     }
     $extensions = [];
     /* @var $file \SplFileInfo */
@@ -151,7 +153,7 @@ class ExtensionRepository {
   }
 
   /**
-   * Find all the info files in the codebase.
+   * Find all the info.yml files in the codebase.
    *
    * Exclude hidden extensions and those in the 'testing' package.
    *
@@ -160,7 +162,7 @@ class ExtensionRepository {
    * @return \Symfony\Component\Finder\Finder
    *   Finder object ready for iteration.
    */
-  protected static function findInfoFiles($root) {
+  protected static function findInfoYmlFiles($root) {
     // Discover extensions.
     $finder = new Finder();
     $finder->in($root)
@@ -182,6 +184,111 @@ class ExtensionRepository {
         return isset($info['name']) && isset($info['type']);
       });
     return $finder;
+  }
+
+  /**
+   * Find all the info.yml files in the codebase.
+   *
+   * Exclude hidden extensions and those in the 'testing' package.
+   *
+   * @param string $root
+   *
+   * @return \Symfony\Component\Finder\Finder
+   *   Finder object ready for iteration.
+   */
+  protected static function findInfoFiles($root) {
+    // Discover extensions.
+    $finder = new Finder();
+    $finder->in($root)
+      ->exclude(['core', 'vendor'])
+      ->name('*.info')
+      // Test paths can include unmarked test extensions, especially themes.
+      ->notPath('tests')
+      ->filter(function ($info_file) {
+        /* @var $info_file \SplFileInfo */
+        $info = static::drupalParseInfoFormat(file_get_contents($info_file->getPathname()));
+        if (isset($info['hidden']) && $info['hidden'] === TRUE) {
+          return FALSE;
+        }
+        if (isset($info['package']) && strtolower($info['package']) == 'testing') {
+          return FALSE;
+        }
+        // Ensure there's a name, because some contrib modules have files
+        // matching *.info which are not actually extension metadata.
+        return isset($info['name']);
+      });
+    return $finder;
+  }
+
+  /**
+   * Parse Drupal .info file contents.
+   *
+   * Copied from drupal_parse_info_format().
+   *
+   * @param string $data
+   *   Info file contents.
+   *
+   * @return mixed[]
+   *   Parsed keys and values.
+   */
+  public static function drupalParseInfoFormat($data) {
+    $info = array();
+    if (preg_match_all('
+    @^\\s*                           # Start at the beginning of a line, ignoring leading whitespace
+    ((?:
+      [^=;\\[\\]]|                    # Key names cannot contain equal signs, semi-colons or square brackets,
+      \\[[^\\[\\]]*\\]                  # unless they are balanced and not nested
+    )+?)
+    \\s*=\\s*                         # Key/value pairs are separated by equal signs (ignoring white-space)
+    (?:
+      ("(?:[^"]|(?<=\\\\)")*")|     # Double-quoted string, which may contain slash-escaped quotes/slashes
+      (\'(?:[^\']|(?<=\\\\)\')*\')| # Single-quoted string, which may contain slash-escaped quotes/slashes
+      ([^\\r\\n]*?)                   # Non-quoted string
+    )\\s*$                           # Stop at the next end of a line, ignoring trailing whitespace
+    @msx', $data, $matches, PREG_SET_ORDER)) {
+      foreach ($matches as $match) {
+
+        // Fetch the key and value string.
+        $i = 0;
+        foreach (array(
+        'key',
+        'value1',
+        'value2',
+        'value3',
+        ) as $var) {
+          ${$var} = isset($match[++$i]) ? $match[$i] : '';
+        }
+        $value = stripslashes(substr($value1, 1, -1)) . stripslashes(substr($value2, 1, -1)) . $value3;
+
+        // Parse array syntax.
+        $keys = preg_split('/\\]?\\[/', rtrim($key, ']'));
+        $last = array_pop($keys);
+        $parent = & $info;
+
+        // Create nested arrays.
+        foreach ($keys as $key) {
+          if ($key == '') {
+            $key = count($parent);
+          }
+          if (!isset($parent[$key]) || !is_array($parent[$key])) {
+            $parent[$key] = array();
+          }
+          $parent = & $parent[$key];
+        }
+
+        // Handle PHP constants.
+        if (preg_match('/^\\w+$/i', $value) && defined($value)) {
+          $value = constant($value);
+        }
+
+        // Insert actual value.
+        if ($last == '') {
+          $last = count($parent);
+        }
+        $parent[$last] = $value;
+      }
+    }
+    return $info;
   }
 
 }

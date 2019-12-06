@@ -23,10 +23,21 @@ class JsonFileUtility {
    */
   protected $jsonFileContents;
 
+  /**
+   * Construct a JsonFileUtility object.
+   *
+   * @param \Composer\Json\JsonFile $json_file
+   *   The JsonFile object we'll use.
+   */
   public function __construct(JsonFile $json_file) {
     $this->jsonFile = $json_file;
   }
 
+  /**
+   * Parsed JSON contents from the JSON file.
+   *
+   * @return mixed
+   */
   protected function getContents() {
     if (empty($this->jsonFileContents)) {
       $this->jsonFileContents = $this->jsonFile->read();
@@ -34,10 +45,22 @@ class JsonFileUtility {
     return $this->jsonFileContents;
   }
 
+  /**
+   * Get the JsonFile object we're working with.
+   *
+   * @return \Composer\Json\JsonFile
+   *   The JsonFile for this object.
+   */
   public function getJsonFile() {
     return $this->jsonFile;
   }
 
+  /**
+   * Get both the require and require-dev sections of the composer.json file.
+   *
+   * @return string[][]
+   *   Merged require and reqire-dev sections of the composer.json file.
+   */
   public function getCombinedRequire() {
     return array_merge(
       $this->getRequire(),

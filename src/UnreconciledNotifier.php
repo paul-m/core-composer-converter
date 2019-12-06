@@ -30,6 +30,9 @@ class UnreconciledNotifier {
     $this->io = $io;
   }
 
+  /**
+   * Tell the user whether they've got unreconciled Drupal extensions.
+   */
   public function notify() {
     $working_dir = realpath($this->composer->getConfig()->get('working-dir'));
     $root_package_path = $working_dir . '/composer.json';

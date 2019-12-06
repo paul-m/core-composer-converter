@@ -11,7 +11,21 @@ use Symfony\Component\Yaml\Yaml;
  */
 class ExtensionReconciler {
 
+  /**
+   * Array of 'exotic' extension human-readable names, keyed by machine name.
+   *
+   * @var string[]
+   */
   protected $exoticSetupExtensions = NULL;
+
+  /**
+   * Extension package names, keyed by extension name.
+   *
+   * Values are package names, such as drupal/ajax_example, keys are the extension
+   * name, such as ajax_example.
+   *
+   * @var string[]
+   */
   protected $needThesePackages = NULL;
 
   /**
