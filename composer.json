@@ -9,9 +9,18 @@
     "symfony/finder": "^3.4",
     "symfony/yaml": "^3.4"
   },
+  "require-dev": {
+    "mikey179/vfsstream": "^1.6.8",
+    "phpunit/phpunit": "^6.5 || ^7"
+  },
   "autoload": {
     "psr-4": {
       "Drupal\\Composer\\Plugin\\ComposerConverter\\": "src"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Drupal\\Tests\\Composer\\Plugin\\ComposerConverter\\": "tests"
     }
   },
   "extra": {
