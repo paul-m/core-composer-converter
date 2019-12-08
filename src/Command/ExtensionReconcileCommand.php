@@ -150,9 +150,7 @@ EOT
       $style->listing($exotic);
     }
 
-    if (!$this->isSubCommand()) {
-      $io->write(['<info>Finished!</info>', '']);
-    }
+    $io->write(['<info>Finished!</info>', '']);
   }
 
 }

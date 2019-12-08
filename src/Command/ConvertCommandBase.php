@@ -9,11 +9,8 @@ use Composer\Package\Version\VersionSelector;
 use Composer\Repository\CompositeRepository;
 use Composer\Repository\PlatformRepository;
 use Composer\Repository\RepositoryFactory;
-use Composer\Util\ProcessExecutor;
 use Symfony\Component\Console\Input\InputInterface;
 use Symfony\Component\Console\Output\OutputInterface;
-use Symfony\Component\Process\ExecutableFinder;
-use Symfony\Component\Process\Process;
 use Composer\Command\BaseCommand;
 
 /**
@@ -35,15 +32,6 @@ class ConvertCommandBase extends BaseCommand {
    * @var \Composer\DependencyResolver\Pool[]
    */
   private $pools;
-  private $isSubCommand = FALSE;
-
-  public function setSubCommand($subcommand = TRUE) {
-    $this->isSubCommand = $subcommand;
-  }
-
-  public function isSubCommand() {
-    return $this->isSubCommand;
-  }
 
   /**
    * @private
@@ -226,10 +214,6 @@ class ConvertCommandBase extends BaseCommand {
     return $requires;
   }
 
-  protected function formatAuthors($author) {
-    return [$this->parseAuthorString($author)];
-  }
-
   protected function formatRequirements(array $requirements) {
     $requires = [];
     $requirements = $this->normalizeRequirements($requirements);
@@ -240,86 +224,10 @@ class ConvertCommandBase extends BaseCommand {
     return $requires;
   }
 
-  protected function getGitConfig() {
-    if (NULL !== $this->gitConfig) {
-      return $this->gitConfig;
-    }
-
-    $finder = new ExecutableFinder();
-    $gitBin = $finder->find('git');
-
-    // TODO in v3 always call with an array
-    if (method_exists('Symfony\Component\Process\Process', 'fromShellCommandline')) {
-      $cmd = new Process([$gitBin, 'config', '-l']);
-    }
-    else {
-      $cmd = new Process(sprintf('%s config -l', ProcessExecutor::escape($gitBin)));
-    }
-    $cmd->run();
-
-    if ($cmd->isSuccessful()) {
-      $this->gitConfig = [];
-      preg_match_all('{^([^=]+)=(.*)$}m', $cmd->getOutput(), $matches, PREG_SET_ORDER);
-      foreach ($matches as $match) {
-        $this->gitConfig[$match[1]] = $match[2];
-      }
-
-      return $this->gitConfig;
-    }
-
-    return $this->gitConfig = [];
-  }
-
-  /**
-   * Checks the local .gitignore file for the Composer vendor directory.
-   *
-   * Tested patterns include:
-   *  "/$vendor"
-   *  "$vendor"
-   *  "$vendor/"
-   *  "/$vendor/"
-   *  "/$vendor/*"
-   *  "$vendor/*"
-   *
-   * @param string $ignoreFile
-   * @param string $vendor
-   *
-   * @return bool
-   */
-  protected function hasVendorIgnore($ignoreFile, $vendor = 'vendor') {
-    if (!file_exists($ignoreFile)) {
-      return FALSE;
-    }
-
-    $pattern = sprintf('{^/?%s(/\*?)?$}', preg_quote($vendor));
-
-    $lines = file($ignoreFile, FILE_IGNORE_NEW_LINES);
-    foreach ($lines as $line) {
-      if (preg_match($pattern, $line)) {
-        return TRUE;
-      }
-    }
-
-    return FALSE;
-  }
-
   protected function normalizeRequirements(array $requirements) {
     $parser = new VersionParser();
 
     return $parser->parseNameVersionPairs($requirements);
-  }
-
-  protected function addVendorIgnore($ignoreFile, $vendor = '/vendor/') {
-    $contents = "";
-    if (file_exists($ignoreFile)) {
-      $contents = file_get_contents($ignoreFile);
-
-      if ("\n" !== substr($contents, 0, -1)) {
-        $contents .= "\n";
-      }
-    }
-
-    file_put_contents($ignoreFile, $contents . $vendor . "\n");
   }
 
   protected function isValidEmail($email) {

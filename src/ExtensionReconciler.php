@@ -3,8 +3,6 @@
 namespace Drupal\Composer\Plugin\ComposerConverter;
 
 use Drupal\Composer\Plugin\ComposerConverter\Extension\ExtensionRepository;
-use Symfony\Component\Finder\Finder;
-use Symfony\Component\Yaml\Yaml;
 
 /**
  * Scans the file system, tells you which extensions are not accounted for.
@@ -247,36 +245,6 @@ class ExtensionReconciler {
     foreach ($this->needThesePackages as $key => $value) {
       $this->needThesePackages[$key] = 'drupal/' . $value;
     }
-  }
-
-  /**
-   * Find all the info files in the codebase.
-   *
-   * Exclude hidden extensions and those in the 'testing' package.
-   *
-   * @param string $root
-   *
-   * @return \Symfony\Component\Finder\Finder
-   *   Finder object ready for iteration.
-   */
-  protected function findInfoFiles($root) {
-    // Discover extensions.
-    $finder = new Finder();
-    $finder->in($root)
-      ->exclude(['core', 'vendor'])
-      ->name('*.info.yml')
-      // Test paths can include unmarked test extensions, especially themes.
-      ->notPath('tests')
-      ->filter(function ($info_file) {
-        $info = Yaml::parseFile($info_file);
-        if (isset($info['hidden']) && $info['hidden'] === TRUE) {
-          return FALSE;
-        }
-        if (isset($info['package']) && strtolower($info['package']) == 'testing') {
-          return FALSE;
-        }
-      });
-    return $finder;
   }
 
 }

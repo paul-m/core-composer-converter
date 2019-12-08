@@ -2,18 +2,18 @@
 
 namespace Drupal\Composer\Plugin\ComposerConverter\Command;
 
-use Drupal\Composer\Plugin\ComposerConverter\DrupalInspector;
-use Drupal\Composer\Plugin\ComposerConverter\ExtensionReconciler;
-use Drupal\Composer\Plugin\ComposerConverter\JsonFileUtility;
-use Symfony\Component\Console\Input\InputInterface;
-use Symfony\Component\Console\Input\InputOption;
-use Symfony\Component\Console\Output\OutputInterface;
 use Composer\Json\JsonFile;
 use Composer\Json\JsonManipulator;
 use Composer\Semver\Semver;
+use Drupal\Composer\Plugin\ComposerConverter\DrupalInspector;
+use Drupal\Composer\Plugin\ComposerConverter\ExtensionReconciler;
+use Drupal\Composer\Plugin\ComposerConverter\JsonFileUtility;
+use Symfony\Component\Console\Input\ArrayInput;
+use Symfony\Component\Console\Input\InputInterface;
+use Symfony\Component\Console\Input\InputOption;
+use Symfony\Component\Console\Output\OutputInterface;
 use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
-use Symfony\Component\Console\Input\ArrayInput;
 
 /**
  * Performs a conversion of a composer.json file.
@@ -34,14 +34,13 @@ class ConvertCommand extends ConvertCommandBase {
    */
   private $backupComposerJsonPath;
   private $rootComposerJsonPath;
-  protected $userCanceled = FALSE;
 
   /**
    * {@inheritdoc}
    */
   protected function configure() {
     $this
-      ->setName('drupal-legacy-convert')
+      ->setName('drupal:legacy-convert')
       ->setDescription('Convert your Drupal project to a Composer-based one.')
       ->setDefinition([
         new InputOption('package-name', NULL, InputOption::VALUE_REQUIRED, 'The new package name, to replace drupal/drupal.', 'drupal/legacy-project-converted'),
@@ -99,8 +98,13 @@ EOT
 
     // Replace composer.json with our template...
     $io->write(' - Creating new composer.json file...');
-    $drupal_class_file = $this->locateDrupalClassFile($working_dir);
-    $core_minor = $this->determineDrupalCoreVersion($drupal_class_file);
+
+    // Come up with a Drupal core minor version. If we can't determine the actual
+    // core version, we'll default to ^8.7 and warn the user that we're guessing.
+    if (!$core_minor = $this->determineDrupalCoreVersion($this->locateDrupalClassFile($working_dir))) {
+      $io->write(' - <info>Unable to determine core version. Defaulting to ^8.7.</info>');
+      $core_minor = '^8.7';
+    }
     // Put our info into the template.
     $template_contents = str_replace(
       '%core_minor%',
@@ -139,14 +143,12 @@ EOT
       }
     }
 
-    // @todo: Include patch plugin if patches are present.
-    // Finally write out our new composer.json content. We do this so that adding
-    // require and require-dev can resolve against any changes to repositories.
+    // Finally write out our new composer.json content and send it off to
+    // drupal:reconcile-extensions.
     file_put_contents($this->rootComposerJsonPath, $manipulator->getContents());
 
     /* @var $reconcile_command \Composer\Command\BaseCommand */
     $reconcile_command = $this->getApplication()->find('drupal:reconcile-extensions');
-    $reconcile_command->setSubCommand(TRUE);
     $return_code = $reconcile_command->run(
       new ArrayInput([
         '--dry-run' => $input->getOption('dry-run'),
@@ -157,9 +159,6 @@ EOT
         ]),
       $output
     );
-
-    $io->write('<info>Finished!</info>');
-    $io->write('');
   }
 
   /**
@@ -176,21 +175,6 @@ EOT
     if ($hardExit) {
       exit(1);
     }
-  }
-
-  /**
-   * Get extension requirements from the original composer.json.
-   *
-   * @return string[][]
-   *   Top level key is either 'require' or 'require-dev'. Second-level keys are
-   *   package names. Values are version constraints.
-   */
-  protected function getRequiredExtensions(JsonFileUtility $from_util, $working_dir) {
-    $reconciler = new ExtensionReconciler($from_util, $working_dir);
-    return [
-      'require' => $reconciler->getSpecifiedExtensions($from_util),
-      'require-dev' => $reconciler->getSpecifiedExtensions($from_util, TRUE),
-    ];
   }
 
   /**
@@ -252,45 +236,28 @@ EOT
   }
 
   /**
-   * Copy config for: Repositories, patches, config for drupal/core-* plugins.
+   * Ensure that new root has Drupal Composer facade repo.
    */
   protected function copyRepositories(JsonFileUtility $from, JsonManipulator $to) {
-    // Ensure that new root has Drupal Composer facade repo.
-    $required_repositories = [
-      'drupal_composer_facade' => [
-        'type' => 'composer',
-        'url' => 'https://packages.drupal.org/8',
-      ],
-    ];
-
+    $drupal_facade = 'https://packages.drupal.org/8';
     $from_repositories = $from->getRepositories();
 
-    $to->addMainKey('repositories', array_merge($from_repositories, $required_repositories));
-  }
-
-  /**
-   * Determine whether the composer.json file has patches configured.
-   *
-   * @param \Drupal\Composer\Plugin\ComposerConverter\JsonFileUtility $from
-   *   The composer.json file we're curious about.
-   *
-   * @return bool
-   *   TRUE if patch configurations were detected, FALSE otherwise.
-   */
-  protected function hasPatchesConfig(JsonFileUtility $from) {
-    $patch_config_keys = [
-      'patches',
-      'patches-file',
-      'patches-ignore',
-      'enable-patching',
-    ];
-    $extra_json_keys = array_keys($from->getExtra());
-    foreach ($patch_config_keys as $patch_config) {
-      if (in_array($patch_config, $extra_json_keys)) {
-        return TRUE;
+    // If we already have the Drupal facade then we don't need to add it.
+    $needs_facade = TRUE;
+    foreach ($from_repositories as $repository) {
+      if (($repository['url'] ?: NULL) === $drupal_facade) {
+        $needs_facade = FALSE;
       }
     }
-    return FALSE;
+
+    if ($needs_facade) {
+      $from_repositories[] = [
+        'type' => 'composer',
+        'url' => $drupal_facade,
+      ];
+    }
+
+    $to->addMainKey('repositories', $from_repositories);
   }
 
   /**
@@ -301,7 +268,7 @@ EOT
    *   core/lib/Drupal.php. If empty or FALSE, a default value will be returned.
    *
    * @return string
-   *   A version constraint for the current Drupal core minor version. If none can be
+   *   A semver constraint for the current Drupal core minor version. If none can be
    *   determined, defaults to '^8.7'.
    */
   protected function determineDrupalCoreVersion($drupal_class_file) {
