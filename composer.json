@@ -1,6 +1,6 @@
 {
   "name": "mile23/core-composer-converter",
-  "description": "Get the Composer status for this Drupal project.",
+  "description": "Convert a composer.json file to be a happy Drupal Composer citizen.",
   "license": "GPL-2.0-or-later",
   "type": "composer-plugin",
   "require": {
