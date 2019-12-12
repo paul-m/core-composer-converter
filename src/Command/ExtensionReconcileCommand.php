@@ -7,6 +7,7 @@ use Composer\Json\JsonFile;
 use Composer\Json\JsonManipulator;
 use Composer\Repository\CompositeRepository;
 use Composer\Repository\PlatformRepository;
+use Composer\Installer;
 use Drupal\Composer\Plugin\ComposerConverter\ExtensionReconciler;
 use Drupal\Composer\Plugin\ComposerConverter\JsonFileUtility;
 use Symfony\Component\Console\Input\InputInterface;
@@ -150,7 +151,68 @@ EOT
       $style->listing($exotic);
     }
 
+    try {
+      return $this->doUpdate($input, $output, $io, $requirements);
+    }
+    catch (\Exception $e) {
+  //    $this->revertComposerFile(false);
+      throw $e;
+    }
+
     $io->write(['<info>Finished!</info>', '']);
+  }
+
+  /**
+   * Perform the update.
+   *
+   * Swiped from Composer\Command\RequireCommand.
+   *
+   * @param \Symfony\Component\Console\Input\InputInterface $input
+   * @param \Symfony\Component\Console\Output\OutputInterface $output
+   * @param \Drupal\Composer\Plugin\ComposerConverter\Command\IOInterface $io
+   * @param array $requirements
+   * @return mixed
+   */
+  private function doUpdate(InputInterface $input, OutputInterface $output, IOInterface $io, array $requirements) {
+    // Update packages
+    $this->resetComposer();
+    $composer = $this->getComposer(TRUE, $input->getOption('no-plugins'));
+    $composer->getDownloadManager()->setOutputProgress(!$input->getOption('no-progress'));
+
+    $updateDevMode = !$input->getOption('update-no-dev');
+    $optimize = $input->getOption('optimize-autoloader') || $composer->getConfig()->get('optimize-autoloader');
+    $authoritative = $input->getOption('classmap-authoritative') || $composer->getConfig()->get('classmap-authoritative');
+    $apcu = $input->getOption('apcu-autoloader') || $composer->getConfig()->get('apcu-autoloader');
+
+    //    $commandEvent = new CommandEvent(PluginEvents::COMMAND, 'require', $input, $output);
+    //  $composer->getEventDispatcher()->dispatch($commandEvent->getName(), $commandEvent);
+
+    $install = Installer::create($io, $composer);
+
+    $install
+      ->setVerbose($input->getOption('verbose'))
+      ->setPreferSource($input->getOption('prefer-source'))
+      ->setPreferDist($input->getOption('prefer-dist'))
+      ->setDevMode($updateDevMode)
+      ->setRunScripts(!$input->getOption('no-scripts'))
+      ->setSkipSuggest($input->getOption('no-suggest'))
+      ->setOptimizeAutoloader($optimize)
+      ->setClassMapAuthoritative($authoritative)
+      ->setApcuAutoloader($apcu)
+      ->setUpdate(TRUE)
+      ->setUpdateWhitelist(array_keys($requirements))
+      ->setWhitelistTransitiveDependencies($input->getOption('update-with-dependencies'))
+      ->setWhitelistAllDependencies($input->getOption('update-with-all-dependencies'))
+      ->setIgnorePlatformRequirements($input->getOption('ignore-platform-reqs'))
+      ->setPreferStable($input->getOption('prefer-stable'))
+      ->setPreferLowest($input->getOption('prefer-lowest'));
+
+    $status = $install->run();
+    if ($status !== 0) {
+//      $this->revertComposerFile(FALSE);
+    }
+
+    return $status;
   }
 
 }

@@ -8,12 +8,15 @@ use PHPUnit\Framework\TestCase;
 /**
  * Tests the DrupalInspector class.
  *
+ * @coversDefaultClass Drupal\Composer\Plugin\ComposerConverter\DrupalInspector
+ *
  * @group ComposerConverter
  */
 class DrupalInspectorTest extends TestCase {
 
   /**
    * @dataProvider providerGetSemanticVersion
+   * @covers ::getSemanticVersion
    */
   public function testGetSemanticVersion($drupal_version, $semantic_version) {
     $converted_version = DrupalInspector::getSemanticVersion($drupal_version);
@@ -40,6 +43,7 @@ class DrupalInspectorTest extends TestCase {
 
   /**
    * @dataProvider providerDetermineDrupalCoreVersionFromDrupalPhp
+   * @covers ::determineDrupalCoreVersionFromDrupalPhp
    */
   public function testDetermineDrupalCoreVersionFromDrupalPhp($file_contents, $expected_core_version) {
     $core_version = DrupalInspector::determineDrupalCoreVersionFromDrupalPhp($file_contents);

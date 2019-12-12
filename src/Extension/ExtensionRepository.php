@@ -32,12 +32,13 @@ class ExtensionRepository {
   protected $exoticExtensions = NULL;
 
   /**
+   * Factory method for a ExtensionRepository object.
    *
    * @param string $root_directory
    *   Full path to the root directory where we start searching.
    * @param \Iterator $extension_iterator
    *   (optional) An iterator which supplies \SplFileInfo objects for *.info.yml
-   *   files. Defaults to using the iterator supplied by static::findInfoFiles().
+   *   files. Defaults to using the iterator supplied by static::findInfo*Files().
    *
    * @return \static
    *   An extension collection object.

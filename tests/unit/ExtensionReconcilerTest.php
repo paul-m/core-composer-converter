@@ -44,6 +44,7 @@ class ExtensionReconcilerTest extends TestCase {
 
   /**
    * @dataProvider provideGetSpecifiedExtensions
+   * @covers ::getSpecifiedExtensions
    */
   public function testGetSpecifiedExtensions($expected, $require, $projects) {
     $from = $this->getMockBuilder(JsonFileUtility::class)
@@ -115,6 +116,7 @@ class ExtensionReconcilerTest extends TestCase {
 
   /**
    * @dataProvider provideNeededPackagesExotic
+   * @covers ::getExoticPackages
    */
   public function testProcessNeededPackagesExotic($expected, $require, $working_dir_filesystem) {
     // Mock our composer.json require section.
@@ -211,6 +213,7 @@ class ExtensionReconcilerTest extends TestCase {
 
   /**
    * @dataProvider provideNeededPackagesUnreconciled
+   * @covers ::processPackages
    */
   public function testProcessNeededPackagesUnreconciled($expected, $require, $working_dir_filesystem, $prefer_projects) {
     // Mock our composer.json require section.
