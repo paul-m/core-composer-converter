@@ -3,7 +3,6 @@
 namespace Drupal\Composer\Plugin\ComposerConverter\Extension;
 
 use Drupal\Composer\Plugin\ComposerConverter\DrupalInspector;
-use Drupal\Composer\Plugin\ComposerConverter\Extension\ExtensionRepository;
 use Symfony\Component\Yaml\Yaml;
 
 /**

@@ -232,7 +232,7 @@ class ExtensionRepository {
    *   Parsed keys and values.
    */
   public static function drupalParseInfoFormat($data) {
-    $info = array();
+    $info = [];
     if (preg_match_all('
     @^\\s*                           # Start at the beginning of a line, ignoring leading whitespace
     ((?:
@@ -250,12 +250,12 @@ class ExtensionRepository {
 
         // Fetch the key and value string.
         $i = 0;
-        foreach (array(
+        foreach ([
         'key',
         'value1',
         'value2',
         'value3',
-        ) as $var) {
+        ] as $var) {
           ${$var} = isset($match[++$i]) ? $match[$i] : '';
         }
         $value = stripslashes(substr($value1, 1, -1)) . stripslashes(substr($value2, 1, -1)) . $value3;
@@ -271,7 +271,7 @@ class ExtensionRepository {
             $key = count($parent);
           }
           if (!isset($parent[$key]) || !is_array($parent[$key])) {
-            $parent[$key] = array();
+            $parent[$key] = [];
           }
           $parent = & $parent[$key];
         }

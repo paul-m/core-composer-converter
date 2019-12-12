@@ -3,6 +3,9 @@
   "description": "Convert a composer.json file to be a happy Drupal Composer citizen.",
   "license": "GPL-2.0-or-later",
   "type": "composer-plugin",
+  "platform": {
+    "php": "7.0.8"
+  },
   "require": {
     "php": ">=7.0.8",
     "composer-plugin-api": "^1.0.0",
@@ -12,6 +15,7 @@
   "require-dev": {
     "behat/mink": "1.7.x-dev",
     "behat/mink-goutte-driver": "^1.2",
+    "drupal/coder": "8.3.6",
     "drupal/core-filesystem": "^8.7",
     "mikey179/vfsstream": "^1.6.8",
     "phpunit/phpunit": "^6.5 || ^7",
@@ -34,5 +38,13 @@
   },
   "extra": {
     "class": "Drupal\\Composer\\Plugin\\ComposerConverter\\ConverterPlugin"
+  },
+  "scripts": {
+    "phpcs": "phpcs --runtime-set installed_paths $($COMPOSER_BINARY config vendor-dir)/drupal/coder/coder_sniffer -ps src tests",
+    "phpcbf": "phpcbf --runtime-set installed_paths $($COMPOSER_BINARY config vendor-dir)/drupal/coder/coder_sniffer -ps src tests",
+    "lint": [
+      "find src -name '*.php' -print0 | xargs -0 -n1 php -l",
+      "find tests -name '*.php' -print0 | xargs -0 -n1 php -l"
+    ]
   }
 }
