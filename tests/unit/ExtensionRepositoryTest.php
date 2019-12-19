@@ -31,8 +31,8 @@ class ExtensionRepositoryTest extends TestCase {
 
     $extensions = $repo->getExtensions();
 
-    $this->assertArrayHasKey('d7module', $extensions);
     $this->assertArrayHasKey('d8module', $extensions);
+    $this->assertArrayNotHasKey('d7module', $extensions);
   }
 
 }
