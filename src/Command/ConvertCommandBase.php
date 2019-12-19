@@ -48,6 +48,18 @@ class ConvertCommandBase extends BaseCommand {
     return $this->repos;
   }
 
+  /**
+   *
+   * @param \Symfony\Component\Console\Input\InputInterface $input
+   * @param \Symfony\Component\Console\Output\OutputInterface $output
+   * @param mixed $requires
+   * @param mixed $phpVersion
+   * @param mixed $preferredStability
+   * @param mixed $checkProvidedVersions
+   * @return string[]|false
+   *   Array of package names and constraints as a string, or FALSE if there are no
+   *   requirements.
+   */
   protected function determineRequirements(InputInterface $input, OutputInterface $output, $requires = [], $phpVersion = NULL, $preferredStability = 'stable', $checkProvidedVersions = TRUE) {
     if ($requires) {
       $requires = $this->normalizeRequirements($requires);

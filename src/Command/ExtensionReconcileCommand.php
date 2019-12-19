@@ -8,6 +8,7 @@ use Composer\Json\JsonManipulator;
 use Composer\Repository\CompositeRepository;
 use Composer\Repository\PlatformRepository;
 use Composer\Installer;
+use Composer\IO\IOInterface;
 use Drupal\Composer\Plugin\ComposerConverter\ExtensionReconciler;
 use Drupal\Composer\Plugin\ComposerConverter\JsonFileUtility;
 use Symfony\Component\Console\Input\InputInterface;
@@ -20,13 +21,6 @@ use Symfony\Component\Filesystem\Filesystem;
 class ExtensionReconcileCommand extends ConvertCommandBase {
 
   /**
-   * The composer.json file for this project.
-   *
-   * @var string
-   */
-  private $rootComposerJsonPath;
-
-  /**
    * {@inheritdoc}
    */
   protected function configure() {
@@ -35,18 +29,36 @@ class ExtensionReconcileCommand extends ConvertCommandBase {
       ->setDescription('Declare your extensions in composer.json.')
       ->setDefinition([
         new InputOption('dry-run', NULL, InputOption::VALUE_NONE, 'Display all the changes that would occur, without performing them.'),
-        new InputOption('no-update', NULL, InputOption::VALUE_NONE, 'Perform conversion but does not perform update.'),
-        new InputOption('sort-packages', NULL, InputOption::VALUE_NONE, 'Sorts packages when adding/updating a new dependency'),
         new InputOption('prefer-projects', NULL, InputOption::VALUE_NONE, 'When possible, use d.o project name instead of extension name.'),
+        // Options from Composer\Command\RequireCommand.
+        new InputOption('dev', NULL, InputOption::VALUE_NONE, 'Add requirement to require-dev.'),
+        new InputOption('prefer-source', NULL, InputOption::VALUE_NONE, 'Forces installation from package sources when possible, including VCS information.'),
+        new InputOption('prefer-dist', NULL, InputOption::VALUE_NONE, 'Forces installation from package dist even for dev versions.'),
+        new InputOption('no-progress', NULL, InputOption::VALUE_NONE, 'Do not output download progress.'),
+        new InputOption('no-suggest', NULL, InputOption::VALUE_NONE, 'Do not show package suggestions.'),
+        new InputOption('no-update', NULL, InputOption::VALUE_NONE, 'Disables the automatic update of the dependencies.'),
+        new InputOption('no-scripts', NULL, InputOption::VALUE_NONE, 'Skips the execution of all scripts defined in composer.json file.'),
+        new InputOption('update-no-dev', NULL, InputOption::VALUE_NONE, 'Run the dependency update with the --no-dev option.'),
+        new InputOption('update-with-dependencies', NULL, InputOption::VALUE_NONE, 'Allows inherited dependencies to be updated, except those that are root requirements.'),
+        new InputOption('update-with-all-dependencies', NULL, InputOption::VALUE_NONE, 'Allows all inherited dependencies to be updated, including those that are root requirements.'),
+        new InputOption('ignore-platform-reqs', NULL, InputOption::VALUE_NONE, 'Ignore platform requirements (php & ext- packages).'),
+        new InputOption('prefer-stable', NULL, InputOption::VALUE_NONE, 'Prefer stable versions of dependencies.'),
+        new InputOption('prefer-lowest', NULL, InputOption::VALUE_NONE, 'Prefer lowest versions of dependencies.'),
+        new InputOption('sort-packages', NULL, InputOption::VALUE_NONE, 'Sorts packages when adding/updating a new dependency'),
+        new InputOption('optimize-autoloader', 'o', InputOption::VALUE_NONE, 'Optimize autoloader during autoloader dump'),
+        new InputOption('classmap-authoritative', 'a', InputOption::VALUE_NONE, 'Autoload classes from the classmap only. Implicitly enables `--optimize-autoloader`.'),
+        new InputOption('apcu-autoloader', NULL, InputOption::VALUE_NONE, 'Use APCu to cache found/not-found classes.'),
       ])
       ->setHelp(
         <<<EOT
-This command does the following things:
+This command performs the following actions, which might be destructive:
  * Determine if there are any extension on the file system which are not
    represented in the root composer.json.
  * Declare these extensions within composer.json so that you can use Composer
    to manage them.
  * Remove the existing extensions from the file system.
+
+Run the command with option --dry-run to rehearse the process.
 EOT
     );
   }
@@ -56,14 +68,8 @@ EOT
    */
   protected function interact(InputInterface $input, OutputInterface $output) {
     if (!$input->getOption('no-interaction')) {
-      $style = new SymfonyStyle($input, $output);
-      $output->write('<info>The following actions will be performed:</info>');
-      $item_list = [
-        'Determine if there are any extension on the file system which are not represented in composer.json.',
-        'Declare these extensions within composer.json so that you can use Composer to manage them.',
-        'Remove the existing extensions from the file system.',
-      ];
-      $style->listing($item_list);
+      $output->writeln('<info>Warning</info>:');
+      $output->writeln($this->getHelp());
       $helper = $this->getHelper('question');
       if (!$helper->ask($input, $output, new ConfirmationQuestion('Continue? ', FALSE))) {
         throw new \RuntimeException('User cancelled.', 1);
@@ -79,12 +85,12 @@ EOT
     $dry_run = $input->getOption('dry-run');
     $working_dir = realpath($input->getOption('working-dir'));
 
-    $this->rootComposerJsonPath = $working_dir . '/composer.json';
+    $rootComposerJsonPath = $working_dir . '/composer.json';
 
     // Make a reconciler for our root composer.json.
     $io->write(' - Scanning the file system for extensions not in the composer.json file...');
     $reconciler = new ExtensionReconciler(
-      new JsonFileUtility(new JsonFile($this->rootComposerJsonPath)),
+      new JsonFileUtility(new JsonFile($rootComposerJsonPath)),
       $working_dir,
       $input->getOption('prefer-projects')
     );
@@ -96,7 +102,7 @@ EOT
     if ($add_packages) {
       // Use the factory to create a new Composer object, so that we can use
       // changes in our root composer.json.
-      $composer = Factory::create($io, $this->rootComposerJsonPath);
+      $composer = Factory::create($io, $rootComposerJsonPath);
 
       // Populate $this->repos so that our superclass can use it.
       $this->repos = new CompositeRepository(array_merge(
@@ -114,32 +120,44 @@ EOT
       $php_version = $this->repos->findPackage('php', '*')->getPrettyVersion();
 
       // Do some constraint resolution.
+      $requirements = NULL;
       if ($requirements = $this->determineRequirements($input, $output, $add_packages, $php_version, $preferred_stability)) {
         if ($dry_run) {
           $io->write(' - (Dry run) Add these packages: <info>' . implode('</info>, <info>', $requirements) . '</info>');
         }
         else {
           // Add our new dependencies.
-          $manipulator = new JsonManipulator(file_get_contents($this->rootComposerJsonPath));
-          $sort_packages = $input->getOption('sort-packages') || (new JsonFileUtility(new JsonFile($this->rootComposerJsonPath)))->getSortPackages();
+          $manipulator = new JsonManipulator(file_get_contents($rootComposerJsonPath));
+          $sort_packages = $input->getOption('sort-packages') || (new JsonFileUtility(new JsonFile($rootComposerJsonPath)))->getSortPackages();
           foreach ($this->formatRequirements($requirements) as $package => $constraint) {
             $manipulator->addLink('require', $package, $constraint, $sort_packages);
           }
-          file_put_contents($this->rootComposerJsonPath, $manipulator->getContents());
+          file_put_contents($rootComposerJsonPath, $manipulator->getContents());
         }
       }
 
-      if ($unreconciled = $reconciler->getAllUnreconciledExtensions()) {
-        if ($dry_run) {
-          $io->write(' - (Dry run) Remove these extensions from the file system: <info>' . implode('</info>, <info>', array_keys($unreconciled)) . '</info>');
+      // Remove the existing extensions from the file system.
+      if ($dry_run) {
+        $io->write(' - (Dry run) Remove these extensions from the file system: <info>' . implode('</info>, <info>', array_keys($add_packages)) . '</info>');
+      }
+      else {
+        $io->write(' - Removing these extensions from the file system: <info>' . implode('</info>, <info>', array_keys($add_packages)) . '</info>');
+        $extensions = $reconciler->getAllUnreconciledExtensions();
+        $remove_paths = [];
+        foreach (array_keys($add_packages) as $machine_name) {
+          $remove_paths[] = dirname($extensions[$machine_name]->getInfoFile());
         }
-        else {
-          $io->write(' - Removing these extensions from the file system: <info>' . implode('</info>, <info>', array_keys($unreconciled)) . '</info>');
-          $remove_paths = [];
-          foreach ($unreconciled as $machine_name => $extension) {
-            $remove_paths[] = dirname($extension->getInfoFile());
-          }
-          (new Filesystem())->remove($remove_paths);
+        (new Filesystem())->remove($remove_paths);
+      }
+
+      // Perform the update.
+      if ($requirements && (!$dry_run || !$input->getOption('no-update'))) {
+        try {
+          return $this->doUpdate($input, $output, $io, $requirements);
+        }
+        catch (\Exception $e) {
+          // $this->revertComposerFile(false);
+          throw $e;
         }
       }
     }
@@ -151,13 +169,17 @@ EOT
       $style->listing($exotic);
     }
 
-    try {
-      return $this->doUpdate($input, $output, $io, $requirements);
-    }
-    catch (\Exception $e) {
-  //    $this->revertComposerFile(false);
-      throw $e;
-    }
+    // Discover orphaned legacy extensions with *.info files.
+    // @todo Figure out if we really want to do this.
+    /*    $legacy_extensions = ExtensionRepository::create($rootComposerJsonPath, ExtensionRepository::findInfoFiles($rootComposerJsonPath));
+      if ($extensions = $legacy_extensions->getExtensions()) {
+      $rootPathLength = strlen(dirname($rootComposerJsonPath));
+      $legacy_paths = [' - Discovered legacy extensions with *.info files:'];
+      foreach ($extensions as $machine_name => $extension) {
+      $legacy_paths[] = '   ' . substr($extension->getInfoFile()->getPathname(), $rootPathLength);
+      }
+      $io->write($legacy_paths);
+      } */
 
     $io->write(['<info>Finished!</info>', '']);
   }
@@ -170,25 +192,21 @@ EOT
    * @param \Symfony\Component\Console\Input\InputInterface $input
    * @param \Symfony\Component\Console\Output\OutputInterface $output
    * @param \Drupal\Composer\Plugin\ComposerConverter\Command\IOInterface $io
-   * @param array $requirements
-   * @return mixed
+   * @param string[] $requirements
+   *   An array of requirements as package name and version constraint, such as
+   *   'drupal/examples ^1.0'.
    */
   private function doUpdate(InputInterface $input, OutputInterface $output, IOInterface $io, array $requirements) {
     // Update packages
     $this->resetComposer();
     $composer = $this->getComposer(TRUE, $input->getOption('no-plugins'));
     $composer->getDownloadManager()->setOutputProgress(!$input->getOption('no-progress'));
-
     $updateDevMode = !$input->getOption('update-no-dev');
     $optimize = $input->getOption('optimize-autoloader') || $composer->getConfig()->get('optimize-autoloader');
     $authoritative = $input->getOption('classmap-authoritative') || $composer->getConfig()->get('classmap-authoritative');
     $apcu = $input->getOption('apcu-autoloader') || $composer->getConfig()->get('apcu-autoloader');
 
-    //    $commandEvent = new CommandEvent(PluginEvents::COMMAND, 'require', $input, $output);
-    //  $composer->getEventDispatcher()->dispatch($commandEvent->getName(), $commandEvent);
-
     $install = Installer::create($io, $composer);
-
     $install
       ->setVerbose($input->getOption('verbose'))
       ->setPreferSource($input->getOption('prefer-source'))
@@ -209,7 +227,7 @@ EOT
 
     $status = $install->run();
     if ($status !== 0) {
-//      $this->revertComposerFile(FALSE);
+      // $this->revertComposerFile(FALSE);
     }
 
     return $status;

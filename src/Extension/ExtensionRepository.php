@@ -7,6 +7,8 @@ use Symfony\Component\Yaml\Yaml;
 
 /**
  * Given a place to search, find all the Drupal extensions in the filesystem.
+ *
+ * @todo Figure out whether we want to discover *.info files.
  */
 class ExtensionRepository {
 
@@ -45,9 +47,7 @@ class ExtensionRepository {
    */
   public static function create($root_directory, \Iterator $extension_iterator = NULL) {
     if ($extension_iterator === NULL) {
-      $extension_iterator = new \AppendIterator();
-      $extension_iterator->append(static::findInfoFiles($root_directory)->getIterator());
-      $extension_iterator->append(static::findInfoYmlFiles($root_directory)->getIterator());
+      $extension_iterator = static::findInfoYmlFiles($root_directory)->getIterator();
     }
     $extensions = [];
     /* @var $file \SplFileInfo */
@@ -163,7 +163,7 @@ class ExtensionRepository {
    * @return \Symfony\Component\Finder\Finder
    *   Finder object ready for iteration.
    */
-  protected static function findInfoYmlFiles($root) {
+  public static function findInfoYmlFiles($root) {
     // Discover extensions.
     $finder = new Finder();
     $finder->in($root)
@@ -197,7 +197,7 @@ class ExtensionRepository {
    * @return \Symfony\Component\Finder\Finder
    *   Finder object ready for iteration.
    */
-  protected static function findInfoFiles($root) {
+  public static function findInfoFiles($root) {
     // Discover extensions.
     $finder = new Finder();
     $finder->in($root)

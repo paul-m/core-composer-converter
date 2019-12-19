@@ -103,7 +103,8 @@ class ExtensionReconciler {
    * Get all the extension objects that are unreconciled.
    *
    * @return \Drupal\Composer\Plugin\ComposerConverter\Extension\Extension[]
-   *   Array of Extension objects for each unreconciled extension.
+   *   Array of Extension objects for each unreconciled extension keyed by machine
+   *   name.
    */
   public function getAllUnreconciledExtensions() {
     $extension_objects = [];
