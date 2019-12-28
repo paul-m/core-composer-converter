@@ -17,6 +17,8 @@ use Symfony\Component\Console\Style\SymfonyStyle;
 
 /**
  * Performs a conversion of a composer.json file.
+ *
+ * @internal
  */
 class ConvertCommand extends ConvertCommandBase {
 
@@ -81,6 +83,7 @@ EOT
    */
   protected function execute(InputInterface $input, OutputInterface $output) {
     $io = $this->getIO();
+    $vendor_dir = $this->getComposer()->getConfig()->get('vendor-dir');
 
     $working_dir = realpath($input->getOption('working-dir'));
     $this->rootComposerJsonPath = $working_dir . '/composer.json';
@@ -109,7 +112,7 @@ EOT
     $template_contents = str_replace(
       '%core_minor%',
       $core_minor,
-      file_get_contents(__DIR__ . '/../../templates/template.composer.json')
+      file_get_contents($vendor_dir . '/drupal/core-composer-converter/templates/template.composer.json')
     );
     if (file_put_contents($this->rootComposerJsonPath, $template_contents) === FALSE) {
       $io->write('<error>Unable to replace composer.json file.</error>');

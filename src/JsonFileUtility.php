@@ -6,6 +6,8 @@ use Composer\Json\JsonFile;
 
 /**
  * Utility facade for JsonFile.
+ *
+ * @internal
  */
 class JsonFileUtility {
 

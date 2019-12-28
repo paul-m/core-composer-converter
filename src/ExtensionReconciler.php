@@ -6,6 +6,8 @@ use Drupal\Composer\Plugin\ComposerConverter\Extension\ExtensionRepository;
 
 /**
  * Scans the file system, tells you which extensions are not accounted for.
+ *
+ * @internal
  */
 class ExtensionReconciler {
 

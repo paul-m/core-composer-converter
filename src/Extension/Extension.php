@@ -7,6 +7,8 @@ use Symfony\Component\Yaml\Yaml;
 
 /**
  * Data class for extensions.
+ *
+ * @internal
  */
 class Extension {
 

@@ -12,6 +12,8 @@ use Composer\Script\Event;
 
 /**
  * Point of entry for Composer's plugin API.
+ *
+ * @internal
  */
 class ConverterPlugin implements Capable, EventSubscriberInterface, PluginInterface {
 

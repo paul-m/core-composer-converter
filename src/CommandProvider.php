@@ -8,6 +8,8 @@ use Drupal\Composer\Plugin\ComposerConverter\Command\ExtensionReconcileCommand;
 
 /**
  * Command provider API.
+ *
+ * @internal
  */
 class CommandProvider implements CommandProviderCapability {
 

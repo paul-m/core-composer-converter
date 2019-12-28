@@ -6,6 +6,8 @@ namespace Drupal\Composer\Plugin\ComposerConverter;
  * Utilities for dealing with a Drupal codebase.
  *
  * Mostly copied from grasmash/composerize-drupal.
+ *
+ * @internal
  */
 class DrupalInspector {
 

@@ -8,6 +8,8 @@ use Composer\Json\JsonFile;
 
 /**
  * Tell the user if there are unreconciled extension in their Drupal filesystem.
+ *
+ * @internal
  */
 class UnreconciledNotifier {
 

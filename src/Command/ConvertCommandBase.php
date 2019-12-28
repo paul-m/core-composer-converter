@@ -15,6 +15,8 @@ use Composer\Command\BaseCommand;
 
 /**
  * Borrows heavily from \Composer\Command\InitCommand.
+ *
+ * @internal
  */
 class ConvertCommandBase extends BaseCommand {
 

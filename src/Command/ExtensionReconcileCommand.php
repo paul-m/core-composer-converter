@@ -18,6 +18,14 @@ use Symfony\Component\Console\Question\ConfirmationQuestion;
 use Symfony\Component\Console\Style\SymfonyStyle;
 use Symfony\Component\Filesystem\Filesystem;
 
+/**
+ * The extension reconciler command.
+ *
+ * @internal
+ *
+ * @todo Figure out if we really want to discover orphaned legacy extensions
+ *   with *.info files, possibly support D7 conversion.
+ */
 class ExtensionReconcileCommand extends ConvertCommandBase {
 
   /**
@@ -168,18 +176,6 @@ EOT
       $io->write(' - Discovered extensions which are not in the original composer.json, and which do not have drupal.org projects. These extensions will need to be added manually if you wish to manage them through Composer:');
       $style->listing($exotic);
     }
-
-    // Discover orphaned legacy extensions with *.info files.
-    // @todo Figure out if we really want to do this.
-    /*    $legacy_extensions = ExtensionRepository::create($rootComposerJsonPath, ExtensionRepository::findInfoFiles($rootComposerJsonPath));
-      if ($extensions = $legacy_extensions->getExtensions()) {
-      $rootPathLength = strlen(dirname($rootComposerJsonPath));
-      $legacy_paths = [' - Discovered legacy extensions with *.info files:'];
-      foreach ($extensions as $machine_name => $extension) {
-      $legacy_paths[] = '   ' . substr($extension->getInfoFile()->getPathname(), $rootPathLength);
-      }
-      $io->write($legacy_paths);
-      } */
 
     $io->write(['<info>Finished!</info>', '']);
   }
