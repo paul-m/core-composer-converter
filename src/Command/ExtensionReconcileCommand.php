@@ -191,6 +191,9 @@ EOT
    * @param string[] $requirements
    *   An array of requirements as package name and version constraint, such as
    *   'drupal/examples ^1.0'.
+   *
+   * @return int
+   *   0 on success or a positive error code on failure
    */
   private function doUpdate(InputInterface $input, OutputInterface $output, IOInterface $io, array $requirements) {
     // Update packages

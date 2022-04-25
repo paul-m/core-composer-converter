@@ -38,6 +38,13 @@ class ConvertCommand extends ConvertCommandBase {
   private $rootComposerJsonPath;
 
   /**
+   * Array of messages to add to extra:drupal-core-project-message.
+   *
+   * @var string[]
+   */
+  private $postInstallMessages = [];
+
+  /**
    * {@inheritdoc}
    */
   protected function configure() {
@@ -50,6 +57,8 @@ class ConvertCommand extends ConvertCommandBase {
         new InputOption('no-update', NULL, InputOption::VALUE_NONE, 'Perform conversion but does not perform update.'),
         new InputOption('sort-packages', NULL, InputOption::VALUE_NONE, 'Sorts packages when adding/updating a new dependency'),
         new InputOption('prefer-projects', NULL, InputOption::VALUE_NONE, 'When possible, use d.o project name instead of extension name.'),
+        new InputOption('core-version', NULL, InputOption::VALUE_REQUIRED, 'The core version of the site. Current options: 7, 8.', '7'),
+        new InputOption('docroot', NULL, InputOption::VALUE_REQUIRED, 'Docroot for the web-acessible parts of the site.', '.'),
       ])
       ->setHelp(
         <<<EOT
@@ -60,6 +69,21 @@ you can undo the changes here. Never perform this operation on a production
 site.
 EOT
     );
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  protected function initialize(InputInterface $input, OutputInterface $output) {
+    parent::initialize($input, $output);
+    // Drupal 7 sites are always set up as having the docroot the same as the
+    // project root. Users get instructions on how to change this.
+    if ($input->getOption('core-version') == '7') {
+      $input->setOption('docroot', '.');
+      $message = 'Conversion utility sets docroot to the project directory for Drupal 7.';
+      $this->postInstallMessages[] = $message;
+      $output->writeln($message);
+    }
   }
 
   /**

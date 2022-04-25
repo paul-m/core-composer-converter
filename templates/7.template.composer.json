@@ -1,0 +1,63 @@
+{
+  "name": "drupal/7-converted-project",
+  "description": "Project template for Drupal 7 projects",
+  "type": "project",
+  "license": "GPL-2.0-or-later",
+  "homepage": "https://www.drupal.org/project/drupal",
+  "repositories": [
+    {
+      "type": "composer",
+      "url": "https://packages.drupal.org/7"
+    }
+  ],
+  "require": {
+    "composer/installers": "^1.2",
+    "drupal/drupal": "%core_minor",
+    "drupal/core-vendor-hardening": "%core_minor%",
+    "drupal-composer/preserve-paths": "^0.1"
+  },
+  "minimum-stability": "dev",
+  "prefer-stable": true,
+  "config": {
+    "sort-packages": true
+  },
+  "extra": {
+    "_readme": [
+      "We use installer-paths to place Drupal 7 core in a core-storage/",
+      "directory because downloading drupal/drupal 7.x might overwrite",
+      "the whole project. If your site has a separate docroot for core,",
+      "you can change the paths in installer-paths.",
+      "We also configure drupal-composer/preserve-paths to preserve all",
+      "the directories that might be overridden by our installer-paths",
+      "configurations."
+    ],
+    "drupal-scaffold": {
+      "locations": {
+        "web-root": "./"
+      }
+    },
+    "installer-paths": {
+      "core-storage": ["type:drupal-core"],
+      "libraries/{$name}": ["type:drupal-library"],
+      "modules/contrib/{$name}": ["type:drupal-module"],
+      "profiles/contrib/{$name}": ["type:drupal-profile"],
+      "themes/contrib/{$name}": ["type:drupal-theme"],
+      "drush/Commands/contrib/{$name}": ["type:drupal-drush"],
+      "modules/custom/{$name}": ["type:drupal-custom-module"],
+      "themes/custom/{$name}": ["type:drupal-custom-theme"]
+    },
+    "preserve-paths": [
+      "libraries",
+      "modules",
+      "profiles",
+      "themes",
+      "drush"
+    ],
+    "drupal-core-project-message": {
+      "post-create-project-cmd-message": [
+        "Thanks for installing this project.",
+        "Please visit our documentation here: http://example.com/docs"
+      ]
+    }
+  }
+}
