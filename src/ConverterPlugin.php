@@ -27,6 +27,20 @@ class ConverterPlugin implements Capable, EventSubscriberInterface, PluginInterf
   /**
    * {@inheritdoc}
    */
+  public function deactivate(Composer $composer, IOInterface $io) {
+    // Necessary for API.
+  }
+
+  /**
+   * {@inheritdoc}
+   */
+  public function uninstall(Composer $composer, IOInterface $io) {
+    // Necessary for API.
+  }
+
+  /**
+   * {@inheritdoc}
+   */
   public function getCapabilities() {
     return [
       ComposerCommandProvider::class => CommandProvider::class,
