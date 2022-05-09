@@ -178,6 +178,7 @@ EOT
     }
 
     $io->write(['<info>Finished!</info>', '']);
+    return 0;
   }
 
   /**
