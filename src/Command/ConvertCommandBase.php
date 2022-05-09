@@ -227,7 +227,7 @@ class ConvertCommandBase extends BaseCommand {
     $key = $minimumStability ?: 'default';
 
     if (!isset($this->pools[$key])) {
-      $this->pools[$key] = $pool = new Pool($minimumStability ?: $this->getMinimumStability($input));
+      $this->pools[$key] = $pool = new Pool([$minimumStability ?: $this->getMinimumStability($input)]);
       $pool->addRepository($this->getRepos());
     }
 
