@@ -22,4 +22,3 @@ NOTE
 ----
 
 This isn't the real plugin. This is a development version. Don't use it.
-
